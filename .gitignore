@@ -1,0 +1,41 @@
+# compiled output
+/dist
+/node_modules
+/build
+
+# logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# environment
+.env
+.env.*
+!.env.example
+
+# tests
+/coverage
+/.nyc_output
+
+# IDE
+/.idea
+/.project
+/.classpath
+/.c9/
+*.launch
+.settings/
+*.sublime-workspace
+/.vscode/*
+!/.vscode/extensions.json
+
+# caches
+*.tsbuildinfo
+.eslintcache
+.oxlintcache
+
+# OS
+.DS_Store
+Thumbs.db

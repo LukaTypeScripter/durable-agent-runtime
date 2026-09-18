@@ -1,24 +1,26 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import type { AppConfig } from '../config/configuration.js';
 import { RunsRepository } from './runs.repository.js';
 import type { Run } from './runs.repository.js';
 import type { CreateRunDto } from './dto/create-run.dto.js';
+import { RunsQueue } from './runs.queue.js';
+import { FIRST_TURN, turnStep } from './step-key.js';
 
 @Injectable()
 export class RunsService {
   constructor(
     private readonly repository: RunsRepository,
-    private readonly config: ConfigService<AppConfig, true>,
+    private readonly runsQueue: RunsQueue,
   ) {}
 
-  create(dto: CreateRunDto): Promise<Run> {
-    return this.repository.create({
-      goal: dto.goal,
-      model:
-        dto.model ??
-        this.config.get('llm.anthropic.defaultModel', { infer: true }),
+  async create(dto: CreateRunDto): Promise<Run> {
+    const run = await this.repository.createWithFirstEvent(dto);
+
+    await this.runsQueue.enqueueTurn({
+      runId: run.id,
+      stepKey: turnStep(FIRST_TURN),
     });
+
+    return run;
   }
 
   async findById(id: string): Promise<Run> {

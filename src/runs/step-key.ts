@@ -20,4 +20,8 @@ export function approvalStep(turn: number, index: number): StepKey {
   return key(`turn:${turn}:tool:${index}:approval`);
 }
 
+export function runCreatedStep(): StepKey {
+  return key('run:created');
+}
+
 export const FIRST_TURN = 1;

@@ -1,17 +1,18 @@
 import { NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import type { TestingModule } from '@nestjs/testing';
 import { RunsRepository } from './runs.repository.js';
 import type { Run } from './runs.repository.js';
 import { RunsService } from './runs.service.js';
+import { RunsQueue } from './runs.queue.js';
+import { turnStep } from './step-key.js';
+
+type Mocked<T> = { [K in keyof T]: ReturnType<typeof vi.fn> };
 
 describe('RunsService', () => {
   let service: RunsService;
-  let repository: {
-    create: ReturnType<typeof vi.fn>;
-    findById: ReturnType<typeof vi.fn>;
-  };
+  let repository: Mocked<RunsRepository>;
+  let runsQueue: Mocked<RunsQueue>;
 
   const run: Run = {
     id: '00000000-0000-4000-8000-000000000001',
@@ -24,38 +25,64 @@ describe('RunsService', () => {
   };
 
   beforeEach(async () => {
-    repository = { create: vi.fn(), findById: vi.fn() };
+    repository = { findById: vi.fn(), createWithFirstEvent: vi.fn() };
+    runsQueue = { enqueueTurn: vi.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RunsService,
         { provide: RunsRepository, useValue: repository },
-        { provide: ConfigService, useValue: { get: () => 'claude-sonnet-5' } },
+        { provide: RunsQueue, useValue: runsQueue },
       ],
     }).compile();
 
     service = module.get(RunsService);
   });
 
-  it('falls back to the configured model when none is requested', async () => {
-    repository.create.mockResolvedValue(run);
+  it('persists the run with the requested model', async () => {
+    repository.createWithFirstEvent.mockResolvedValue(run);
 
-    await expect(service.create({ goal: 'a goal' })).resolves.toBe(run);
-    expect(repository.create).toHaveBeenCalledWith({
+    await expect(
+      service.create({ goal: 'a goal', model: 'claude-haiku-4-5' }),
+    ).resolves.toBe(run);
+
+    expect(repository.createWithFirstEvent).toHaveBeenCalledWith({
       goal: 'a goal',
-      model: 'claude-sonnet-5',
+      model: 'claude-haiku-4-5',
     });
   });
 
-  it('keeps an explicitly requested model', async () => {
-    repository.create.mockResolvedValue(run);
+  it('enqueues the first turn of the new run', async () => {
+    repository.createWithFirstEvent.mockResolvedValue(run);
 
-    await service.create({ goal: 'a goal', model: 'claude-opus-5' });
+    await service.create({ goal: 'a goal', model: 'claude-haiku-4-5' });
 
-    expect(repository.create).toHaveBeenCalledWith({
-      goal: 'a goal',
-      model: 'claude-opus-5',
+    expect(runsQueue.enqueueTurn).toHaveBeenCalledWith({
+      runId: run.id,
+      stepKey: turnStep(1),
     });
+  });
+
+  it('enqueues only after the run is committed', async () => {
+    repository.createWithFirstEvent.mockResolvedValue(run);
+
+    await service.create({ goal: 'a goal', model: 'claude-haiku-4-5' });
+
+    expect(
+      repository.createWithFirstEvent.mock.invocationCallOrder[0],
+    ).toBeLessThan(runsQueue.enqueueTurn.mock.invocationCallOrder[0]);
+  });
+
+  it('does not enqueue when persistence fails', async () => {
+    repository.createWithFirstEvent.mockRejectedValue(
+      new Error('insert failed'),
+    );
+
+    await expect(
+      service.create({ goal: 'a goal', model: 'claude-haiku-4-5' }),
+    ).rejects.toThrow('insert failed');
+
+    expect(runsQueue.enqueueTurn).not.toHaveBeenCalled();
   });
 
   it('returns the run when it exists', async () => {

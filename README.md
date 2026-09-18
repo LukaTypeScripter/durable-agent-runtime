@@ -1,8 +1,8 @@
 # durable-agent-runtime
 
-An internal platform for running LLM agents durably. Agents are configuration,
-not code: a team creates one through the API, points it at MCP servers for tools,
-and starts runs that survive process restarts, deploys, and crashes.
+A runtime for running LLM agents durably. Agents are configuration, not code:
+you create one through the API, give it a set of tools, and start runs that
+survive process restarts, deploys, and crashes.
 
 ## How a run works
 
@@ -22,13 +22,12 @@ work:
 - **Budgets.** Turn boundaries are where token, cost, duration, and tool-call
   caps are enforced, before the next call is made rather than after.
 
-Callers start a run and get a run id back immediately; the runtime POSTs a signed
-callback to their webhook when it finishes.
+Callers start a run and get a run id back immediately, then poll it for state.
 
 ## Stack
 
 NestJS 12 on ESM, Postgres via Drizzle for the journal and state, Redis via
-BullMQ for turn scheduling, and adapters for Anthropic and OpenAI.
+BullMQ for turn scheduling, and an Anthropic adapter.
 
 ## Getting started
 
@@ -40,13 +39,9 @@ npm run db:migrate
 npm run start:dev
 ```
 
-Fill in `.env` before starting: `DATABASE_URL`, at least one provider API key,
-and two 32-byte secrets for `API_KEY_PEPPER` and `WEBHOOK_SIGNING_SECRET`.
-Generate each with:
-
-```
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
+`DATABASE_URL` is the only variable you must fill in. `ANTHROPIC_API_KEY` is
+optional — without it the runtime still boots, which is what lets the turn loop
+be developed and tested against a fake provider.
 
 Every variable is validated at boot. A missing or malformed one stops the process
 with all the problems listed at once, rather than failing later at first use.
@@ -74,5 +69,5 @@ Task-specific guides live in `.agents/skills/`.
 ## Status
 
 Early. The configuration layer, database module, and local infrastructure are in
-place. The journal schema, turn loop, queue workers, MCP client, and HTTP API are
-not built yet.
+place. The journal schema, turn loop, queue workers, and HTTP API are not built
+yet.

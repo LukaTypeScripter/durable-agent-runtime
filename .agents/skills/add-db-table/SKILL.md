@@ -17,11 +17,11 @@ export const runs = pgTable(
   'runs',
   {
     id: uuid().primaryKey().defaultRandom(),
-    tenantId: uuid().notNull().references(() => tenants.id),
+    agentId: uuid().notNull().references(() => agents.id),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     status: varchar({ length: 32 }).notNull(),
   },
-  (table) => [index('runs_tenant_created_idx').on(table.tenantId, table.createdAt)],
+  (table) => [index('runs_agent_created_idx').on(table.agentId, table.createdAt)],
 );
 ```
 
@@ -29,13 +29,13 @@ Conventions that are not optional here:
 
 - **Casing.** Both `drizzle.config.ts` and the runtime client are set to
   `snake_case`, so write column keys in camelCase and let Drizzle derive
-  `tenant_id`. Never pass an explicit column name — it defeats the mapping and
+  `agent_id`. Never pass an explicit column name — it defeats the mapping and
   the two sides drift apart.
 - **Timestamps** are always `withTimezone: true`. A run can be parked for days
   awaiting an approval; a naive timestamp will be read back wrong.
-- **Tenant scoping.** Anything a tenant owns carries `tenantId` with a foreign
-  key, and every index that supports a list query leads with it. This platform is
-  multi-tenant; a query that can forget the tenant eventually will.
+- **Indexes follow the queries.** Every index that supports a list query leads
+  with the column that query filters on. The run list is read far more often
+  than it is written; design for the read.
 - **Names** are snake_case plural for tables (`run_events`), and indexes are
   `<table>_<columns>_idx`.
 

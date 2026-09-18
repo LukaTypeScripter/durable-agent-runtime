@@ -1,6 +1,6 @@
 ---
 name: add-nest-module
-description: Create a new NestJS module, service, or provider in this repo's house style. Use when adding a subsystem (queue, MCP client, LLM provider, API surface) — covers the ESM import rule that breaks the build if missed.
+description: Create a new NestJS module, service, or provider in this repo's house style. Use when adding a subsystem (queue, LLM provider, API surface) — covers the ESM import rule that breaks the build if missed.
 ---
 
 ## The rule that catches everyone

@@ -1,7 +1,7 @@
 # durable-agent-runtime
 
-Internal platform that runs LLM agents durably. Agents are **configuration**
-(DB rows), tools come from **MCP servers**, and a run survives process restarts.
+Runtime that runs LLM agents durably. Agents are **configuration** (DB rows),
+and a run survives process restarts.
 
 ## Architecture: turn-scoped jobs over an append-only journal
 
@@ -69,8 +69,8 @@ Refs #123
 ```
 
 - **type** — `feat`, `fix`, `refactor`, `perf`, `test`, `docs`, `build`, `chore`.
-- **scope** — the module touched: `config`, `db`, `runs`, `queue`, `mcp`, `llm`,
-  `auth`, `webhooks`. Omit the scope rather than invent one.
+- **scope** — the module touched: `config`, `db`, `runs`, `queue`, `llm`.
+  Omit the scope rather than invent one.
 - **subject** — imperative mood, lower case, no trailing period, ≤ 72 characters.
   "add turn journal", not "added turn journal" or "adding turn journal".
 - **breaking change** — `!` after the scope (`feat(runs)!:`) plus a

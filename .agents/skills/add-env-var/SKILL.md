@@ -42,15 +42,15 @@ Secrets get a minimum length: `z.string().min(32)`.
 `validateEnv` strips empty strings before parsing, so `MY_VAR=` in a `.env` file
 behaves as unset rather than as `''`. Don't add your own empty-string handling.
 
-Cross-field requirements ("at least one of A or B") go in the `.refine` at the
-bottom of the schema, not in consuming code.
+Cross-field requirements ("at least one of A or B") go in a `.refine` on the
+schema object, not in consuming code.
 
 ### 2. Expose it in `src/config/configuration.ts`
 
 Map it into the grouped tree under the right group, renaming from
 `SCREAMING_SNAKE` to camelCase. The group names — `app`, `database`, `redis`,
-`llm`, `mcp`, `auth`, `webhooks`, `budgets` — are the vocabulary the rest of the
-app uses; add a new group only for a genuinely new subsystem.
+`llm`, `budgets` — are the vocabulary the rest of the app uses; add a new group
+only for a genuinely new subsystem.
 
 ```ts
 myFeature: {
@@ -65,7 +65,7 @@ immediately type-checked everywhere.
 
 Same section, same order as the schema, with the default as the value. Mark it
 `# REQUIRED` if it has no default. **Never put a real secret here** — leave it
-empty and add the generator command as a comment, as `API_KEY_PEPPER` does.
+empty and add the generator command as a comment above it.
 
 Then add it to your own `.env`. That file is git-ignored and must stay that way.
 

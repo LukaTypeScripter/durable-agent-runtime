@@ -1,6 +1,5 @@
 import type { Env } from './env.schema.js';
 
-
 export function buildConfig(env: Env) {
   return {
     app: {
@@ -30,22 +29,6 @@ export function buildConfig(env: Env) {
         apiKey: env.ANTHROPIC_API_KEY,
         defaultModel: env.ANTHROPIC_DEFAULT_MODEL,
       },
-      openai: {
-        apiKey: env.OPENAI_API_KEY,
-        defaultModel: env.OPENAI_DEFAULT_MODEL,
-      },
-    },
-    mcp: {
-      connectTimeoutMs: env.MCP_CONNECT_TIMEOUT_MS,
-      callTimeoutMs: env.MCP_CALL_TIMEOUT_MS,
-    },
-    auth: {
-      apiKeyPepper: env.API_KEY_PEPPER,
-    },
-    webhooks: {
-      signingSecret: env.WEBHOOK_SIGNING_SECRET,
-      timeoutMs: env.WEBHOOK_TIMEOUT_MS,
-      maxAttempts: env.WEBHOOK_MAX_ATTEMPTS,
     },
     budgets: {
       maxTurns: env.RUN_MAX_TURNS,

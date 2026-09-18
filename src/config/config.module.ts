@@ -4,7 +4,6 @@ import { buildConfig } from './configuration.js';
 import type { AppConfig } from './configuration.js';
 import { validateEnv } from './env.schema.js';
 
-
 export type AppConfigService = ConfigService<AppConfig, true>;
 
 @Module({

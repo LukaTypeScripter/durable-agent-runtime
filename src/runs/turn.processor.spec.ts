@@ -2,6 +2,7 @@ import { NotImplementedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Job, Worker } from 'bullmq';
 import { TurnProcessor } from './turn.processor.js';
+import { turnStep } from './step-key.js';
 import type { TurnJobData } from '../queue/queue.constants.js';
 
 describe('TurnProcessor', () => {
@@ -20,7 +21,7 @@ describe('TurnProcessor', () => {
   it('reports that no executor exists yet', () => {
     const processor = new TurnProcessor(config);
     const job = {
-      data: { runId: 'run-1', stepKey: 'turn-1' },
+      data: { runId: 'run-1', stepKey: turnStep(1) },
     } as Job<TurnJobData>;
 
     expect(() => processor.process(job)).toThrow(NotImplementedException);

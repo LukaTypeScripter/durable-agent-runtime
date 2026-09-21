@@ -40,6 +40,7 @@ writing the code, not after.**
 | --- | --- |
 | Anything in `apps/web` — component, page, route, form, or service | `angular-architecture`, then `angular-component` or `angular-service` |
 | A new Angular feature, or where a file belongs | `angular-architecture` |
+| Any screen, component, empty state, or UI copy | `web-design` |
 | A Nest module, service, or provider | `add-nest-module` |
 | A Drizzle table or migration | `add-db-table` |
 | An environment variable | `add-env-var` |

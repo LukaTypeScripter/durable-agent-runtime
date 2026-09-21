@@ -1,0 +1,1 @@
+ALTER TABLE "agent_schema"."runs" ADD COLUMN "claimed_at" timestamp with time zone;

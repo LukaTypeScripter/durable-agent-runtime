@@ -6,5 +6,6 @@ export const TURN_JOB = 'turn';
 
 export interface TurnJobData {
   runId: string;
+  turn: number;
   stepKey: StepKey;
 }

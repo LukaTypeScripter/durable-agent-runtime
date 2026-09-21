@@ -46,6 +46,7 @@ export const envSchema = z.object({
   RUN_MAX_COST_USD: z.coerce.number().positive().default(4),
   RUN_MAX_DURATION_MS: durationMs.default(86_400_000),
   RUN_APPROVAL_TIMEOUT_MS: durationMs.default(604_800_000),
+  TURN_LEASE_MS: durationMs.default(300_000),
 });
 
 export type Env = z.infer<typeof envSchema>;

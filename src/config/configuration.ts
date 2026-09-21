@@ -21,6 +21,7 @@ export function buildConfig(env: Env) {
       workerConcurrency: env.WORKER_CONCURRENCY,
       turnMaxAttempts: env.TURN_MAX_ATTEMPTS,
       turnBackoffMs: env.TURN_BACKOFF_MS,
+      turnLeaseMs: env.TURN_LEASE_MS,
     },
     llm: {
       requestTimeoutMs: env.LLM_REQUEST_TIMEOUT_MS,

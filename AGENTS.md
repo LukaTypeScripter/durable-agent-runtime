@@ -17,18 +17,51 @@ function.
 - Budgets (turns, tool calls, tokens, cost, duration) are enforced at the turn
   boundary, before the next LLM call is made.
 
+## Workspace
+
+A Turborepo. Work in the package that owns the code, and run tasks from the root.
+
+| Package | Path | What it is |
+| --- | --- | --- |
+| `@dar/api` | `apps/api` | The Nest runtime: queue, journal, LLM, tools |
+| `@dar/web` | `apps/web` | Angular 22 frontend |
+| `@dar/contracts` | `packages/contracts` | Zod schemas and types both sides import |
+
+Shared request and response shapes live in `@dar/contracts`. The web app must
+never import from `@dar/api` — that pulls Drizzle and `pg` into the browser
+bundle, and its row types carry `Date` where the wire carries ISO strings.
+
+## Skills
+
+Task-specific guides live in `.agents/skills/`. **Read the relevant skill before
+writing the code, not after.**
+
+| Working on | Read first |
+| --- | --- |
+| Anything in `apps/web` — component, page, route, form, or service | `angular-architecture`, then `angular-component` or `angular-service` |
+| A new Angular feature, or where a file belongs | `angular-architecture` |
+| A Nest module, service, or provider | `add-nest-module` |
+| A Drizzle table or migration | `add-db-table` |
+| An environment variable | `add-env-var` |
+
+Angular here is v22 and several things changed: `standalone: true` and `OnPush`
+are defaults, `@HostBinding` is out, `@Service` replaces
+`@Injectable({ providedIn: 'root' })`, and `*ngIf` is replaced by `@if`. Writing
+the old forms is wrong, not merely dated. Do not write Angular from memory of
+earlier versions — read `angular-component` first.
+
 ## Rules
 
 **ESM.** `"type": "module"` with `nodenext`. Relative imports need the `.js`
 extension even in TypeScript: `import { AppModule } from './app.module.js'`.
 
-**Config.** `process.env` is read in exactly one place: `src/config/env.schema.ts`.
+**Config.** `process.env` is read in exactly one place: `apps/api/src/config/env.schema.ts`.
 Adding a variable means touching three files — the zod schema, the grouped tree in
 `configuration.ts`, and `env.example`. Everywhere else, inject
 `ConfigService<AppConfig, true>` and read it typed:
 `config.get('database.url', { infer: true })`.
 
-**Database.** Drizzle over `pg`. Tables go in `src/db/schema.ts`; inject the
+**Database.** Drizzle over `pg`. Tables go in `apps/api/src/db/schema.ts`; inject the
 `DRIZZLE` token for a typed client. Migrations are generated with
 `npm run db:generate` — never hand-edit the SQL in `drizzle/`.
 
@@ -42,7 +75,9 @@ line needs explaining, extract it into a well-named function or constant. When a
 comment is genuinely wanted, the repository owner will ask for it. Do not remove
 comments the owner has added.
 
-**Tests.** Vitest. Write the failing test before the fix.
+**Tests.** Vitest in both apps. Write the failing test before the fix. Verify
+with `npm run build`, `npm test`, `npm run lint` and `npm run typecheck` from the
+root, which run every package through Turbo.
 
 **Commits.** See [Commit messages](#commit-messages) below. Commit only when
 asked, and never with `--no-verify`.
@@ -90,7 +125,7 @@ commit. If the work splits cleanly, make two commits.
 ## Verify before claiming done
 
 ```
-npm run build && npm test && npm run lint
+npm run build && npm test && npm run lint && npm run typecheck
 ```
 
 Run it and read the output. Don't report work as passing on the strength of

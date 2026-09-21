@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CLAUDE_MODELS } from './models.js';
+import { CLAUDE_MODELS, RUN_STATUSES } from './models.js';
 
 export const createRunSchema = z.object({
   goal: z.string().min(1).max(255),
@@ -14,3 +14,14 @@ export const decideApprovalSchema = z.object({
 });
 
 export type DecideApprovalDto = z.infer<typeof decideApprovalSchema>;
+
+export interface RunResponse {
+  id: string;
+  goal: string | null;
+  model: (typeof CLAUDE_MODELS)[number];
+  status: (typeof RUN_STATUSES)[number];
+  failReason: string | null;
+  claimedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

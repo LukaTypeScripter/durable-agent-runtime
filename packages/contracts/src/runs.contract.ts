@@ -25,3 +25,20 @@ export interface RunResponse {
   createdAt: string;
   updatedAt: string;
 }
+
+export const listRunsQuerySchema = z.object({
+  status: z.enum(RUN_STATUSES).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
+
+export type ListRunsQuery = z.infer<typeof listRunsQuerySchema>;
+
+export interface RunEventResponse {
+  id: string;
+  runId: string;
+  sequence: number;
+  stepKey: string;
+  type: string;
+  payload: unknown;
+  createdAt: string;
+}

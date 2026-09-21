@@ -187,6 +187,36 @@ describe('RunsRepository against Postgres', () => {
     });
   });
 
+  describe('findMany', () => {
+    it('returns newest first', async () => {
+      const first = await repository.createWithFirstEvent(newRun());
+      const second = await repository.createWithFirstEvent(newRun());
+
+      const listed = await repository.findMany({ limit: 50 });
+
+      expect(listed.map((run) => run.id)).toEqual([second.id, first.id]);
+    });
+
+    it('filters by status', async () => {
+      const pending = await repository.createWithFirstEvent(newRun());
+      const claimed = await repository.createWithFirstEvent(newRun());
+      await repository.claimForTurn(claimed.id);
+
+      const running = await repository.findMany({ status: 'running', limit: 50 });
+
+      expect(running.map((run) => run.id)).toEqual([claimed.id]);
+      expect(running.map((run) => run.id)).not.toContain(pending.id);
+    });
+
+    it('honours the limit', async () => {
+      await repository.createWithFirstEvent(newRun());
+      await repository.createWithFirstEvent(newRun());
+      await repository.createWithFirstEvent(newRun());
+
+      expect(await repository.findMany({ limit: 2 })).toHaveLength(2);
+    });
+  });
+
   describe('approval parking', () => {
     it('releases the lease so no worker keeps the run', async () => {
       const created = await repository.createWithFirstEvent(newRun());

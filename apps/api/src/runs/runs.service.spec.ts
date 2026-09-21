@@ -32,6 +32,7 @@ describe('RunsService', () => {
       createWithFirstEvent: vi.fn(),
       findEventByStepKey: vi.fn(),
       findEventsByRun: vi.fn(),
+      findMany: vi.fn(),
       appendEvent: vi.fn(),
       markCompleted: vi.fn(),
       markFailed: vi.fn(),
@@ -97,6 +98,27 @@ describe('RunsService', () => {
     ).rejects.toThrow('insert failed');
 
     expect(runsQueue.enqueueTurn).not.toHaveBeenCalled();
+  });
+
+  it('passes the filter through to the repository', async () => {
+    repository.findMany.mockResolvedValue([run]);
+
+    await expect(service.list({ status: 'pending', limit: 10 })).resolves.toEqual([run]);
+    expect(repository.findMany).toHaveBeenCalledWith({ status: 'pending', limit: 10 });
+  });
+
+  it('reads the journal of a run that exists', async () => {
+    repository.findById.mockResolvedValue(run);
+    repository.findEventsByRun.mockResolvedValue([{ sequence: 0 }]);
+
+    await expect(service.events(run.id)).resolves.toEqual([{ sequence: 0 }]);
+  });
+
+  it('refuses to read the journal of a run that does not exist', async () => {
+    repository.findById.mockResolvedValue(null);
+
+    await expect(service.events(run.id)).rejects.toBeInstanceOf(NotFoundException);
+    expect(repository.findEventsByRun).not.toHaveBeenCalled();
   });
 
   it('returns the run when it exists', async () => {

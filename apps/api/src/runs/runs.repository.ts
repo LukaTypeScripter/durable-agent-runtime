@@ -6,6 +6,7 @@ import { runEvents, runs } from '../db/schema.js';
 import { runCreatedStep } from './step-key.js';
 import { RUN_CREATED } from './conversation.js';
 import type { StepKey } from './step-key.js';
+import type { ListRunsQuery } from '@dar/contracts';
 import { ConfigService } from '@nestjs/config';
 import { AppConfig } from '../config/configuration.js';
 
@@ -55,6 +56,17 @@ export class RunsRepository {
       .returning();
 
     return run ?? null;
+  }
+
+  async findMany(query: ListRunsQuery): Promise<Run[]> {
+    return this.db
+      .select()
+      .from(runs)
+      .where(
+        query.status === undefined ? undefined : eq(runs.status, query.status),
+      )
+      .orderBy(desc(runs.createdAt))
+      .limit(query.limit);
   }
 
   async findEventByStepKey(

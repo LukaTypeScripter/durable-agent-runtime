@@ -71,6 +71,7 @@ describe('TurnProcessor', () => {
       claimForTurn: vi.fn().mockResolvedValue(run),
       createWithFirstEvent: vi.fn(),
       findEventByStepKey: vi.fn().mockResolvedValue(null),
+      findMany: vi.fn(),
       findEventsByRun: vi
         .fn()
         .mockResolvedValue([

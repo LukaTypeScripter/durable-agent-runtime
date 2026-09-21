@@ -12,7 +12,7 @@ export type AppConfigService = ConfigService<AppConfig, true>;
       isGlobal: true,
       cache: true,
       expandVariables: true,
-      envFilePath: ['.env'],
+      envFilePath: ['../../.env', '.env'],
       load: [() => buildConfig(validateEnv(process.env))],
     }),
   ],

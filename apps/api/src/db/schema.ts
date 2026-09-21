@@ -1,3 +1,4 @@
+import { CLAUDE_MODELS } from '@dar/contracts';
 import {
   pgSchema,
   uuid,
@@ -13,17 +14,7 @@ import {
 
 export const agentSchema = pgSchema('agent_schema');
 
-export const modelEnum = pgEnum('model', [
-  'claude-sonnet-4-5',
-  'claude-haiku-4-5',
-  'claude-opus-4-5',
-  'claude-opus-4-6',
-  'claude-sonnet-4-6',
-  'claude-opus-4-7',
-  'claude-sonnet-5',
-  'claude-opus-5',
-  'claude-fable-5-1',
-]);
+export const modelEnum = pgEnum('model', CLAUDE_MODELS);
 
 export const statusEnum = pgEnum('status', [
   'pending',

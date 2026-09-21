@@ -1,7 +1,7 @@
 # compiled output
-/dist
-/node_modules
-/build
+dist
+node_modules
+build
 
 # logs
 logs
@@ -17,8 +17,8 @@ yarn-error.log*
 !.env.example
 
 # tests
-/coverage
-/.nyc_output
+coverage
+.nyc_output
 
 # IDE
 /.idea
@@ -39,3 +39,6 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# turbo
+.turbo

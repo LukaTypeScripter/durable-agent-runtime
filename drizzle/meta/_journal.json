@@ -29,6 +29,13 @@
       "when": 1789972022645,
       "tag": "0003_military_morph",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789976581696,
+      "tag": "0004_complex_black_tarantula",
+      "breakpoints": true
     }
   ]
 }

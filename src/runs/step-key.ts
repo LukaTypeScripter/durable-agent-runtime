@@ -20,6 +20,10 @@ export function approvalStep(turn: number, index: number): StepKey {
   return key(`turn:${turn}:tool:${index}:approval`);
 }
 
+export function approvalDecisionStep(turn: number, index: number): StepKey {
+  return key(`turn:${turn}:tool:${index}:approval:decision`);
+}
+
 export function toolResultsStep(turn: number): StepKey {
   return key(`turn:${turn}:tool-results`);
 }

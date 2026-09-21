@@ -9,6 +9,8 @@ import {
 import { ZodValidationPipe } from '../common/zod-validation.pipe.js';
 import { createRunSchema } from './dto/create-run.dto.js';
 import type { CreateRunDto } from './dto/create-run.dto.js';
+import { decideApprovalSchema } from './dto/decide-approval.dto.js';
+import type { DecideApprovalDto } from './dto/decide-approval.dto.js';
 import { RunsService } from './runs.service.js';
 import type { Run } from './runs.repository.js';
 
@@ -21,6 +23,14 @@ export class RunsController {
     @Body(new ZodValidationPipe(createRunSchema)) dto: CreateRunDto,
   ): Promise<Run> {
     return this.runs.create(dto);
+  }
+
+  @Post(':id/approval')
+  decideApproval(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(decideApprovalSchema)) dto: DecideApprovalDto,
+  ): Promise<Run> {
+    return this.runs.decideApproval(id, dto);
   }
 
   @Get(':id')

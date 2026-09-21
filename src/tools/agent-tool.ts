@@ -4,6 +4,7 @@ export interface AgentTool {
   readonly name: string;
   readonly description: string;
   readonly inputSchema: ZodType;
+  readonly requiresApproval?: boolean;
   execute(input: unknown): Promise<unknown>;
 }
 

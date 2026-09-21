@@ -19,6 +19,10 @@ export class ToolRegistry {
     }));
   }
 
+  requiresApproval(name: string): boolean {
+    return this.tools.get(name)?.requiresApproval === true;
+  }
+
   async execute(name: string, input: unknown): Promise<ToolOutcome> {
     const tool = this.tools.get(name);
 

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { eq, and, or, sql } from 'drizzle-orm';
+import { eq, and, desc, or, sql } from 'drizzle-orm';
 import { DRIZZLE } from '../db/drizzle.module.js';
 import type { Database } from '../db/drizzle.module.js';
 import { runEvents, runs } from '../db/schema.js';
@@ -99,6 +99,34 @@ export class RunsRepository {
         sequence: (previous?.highest ?? 0) + 1,
       });
     });
+  }
+
+  async findLatestEventByType(
+    runId: string,
+    type: string,
+  ): Promise<RunEvent | null> {
+    const [event] = await this.db
+      .select()
+      .from(runEvents)
+      .where(and(eq(runEvents.runId, runId), eq(runEvents.type, type)))
+      .orderBy(desc(runEvents.sequence))
+      .limit(1);
+
+    return event ?? null;
+  }
+
+  async markAwaitingApproval(id: string): Promise<void> {
+    await this.db
+      .update(runs)
+      .set({ status: 'awaiting_approval', claimedAt: null, updatedAt: sql`now()` })
+      .where(eq(runs.id, id));
+  }
+
+  async markPending(id: string): Promise<void> {
+    await this.db
+      .update(runs)
+      .set({ status: 'pending', claimedAt: null, updatedAt: sql`now()` })
+      .where(eq(runs.id, id));
   }
 
   async markFailed(id: string, reason: string): Promise<void> {

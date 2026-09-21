@@ -12,7 +12,16 @@ export class RunsQueue {
 
   async enqueueTurn(data: TurnJobData): Promise<void> {
     await this.queue.add(TURN_JOB, data, {
-      jobId: `${data.runId}:${data.stepKey}`,
+      jobId: this.jobId(data),
     });
+  }
+
+  async resumeTurn(data: TurnJobData): Promise<void> {
+    await this.queue.remove(this.jobId(data));
+    await this.enqueueTurn(data);
+  }
+
+  private jobId(data: TurnJobData): string {
+    return `${data.runId}:${data.stepKey}`;
   }
 }

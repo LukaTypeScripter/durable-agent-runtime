@@ -4,6 +4,8 @@ import type { RunEvent } from './runs.repository.js';
 export const RUN_CREATED = 'run_created';
 export const LLM_RESPONSE = 'llm_response';
 export const TOOL_RESULT = 'tool_result';
+export const APPROVAL_REQUESTED = 'approval_requested';
+export const APPROVAL_DECIDED = 'approval_decided';
 export const TOOL_RESULTS = 'tool_results';
 
 export function foldConversation(

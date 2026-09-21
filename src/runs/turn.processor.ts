@@ -13,12 +13,20 @@ import { RunsQueue } from './runs.queue.js';
 import { RunsRepository } from './runs.repository.js';
 import type { Run } from './runs.repository.js';
 import {
+  APPROVAL_REQUESTED,
   LLM_RESPONSE,
   TOOL_RESULT,
   TOOL_RESULTS,
   foldConversation,
 } from './conversation.js';
-import { llmCallStep, toolCallStep, toolResultsStep, turnStep } from './step-key.js';
+import {
+  approvalDecisionStep,
+  approvalStep,
+  llmCallStep,
+  toolCallStep,
+  toolResultsStep,
+  turnStep,
+} from './step-key.js';
 import type { StepKey } from './step-key.js';
 
 @Processor(RUNS_QUEUE)
@@ -88,7 +96,14 @@ export class TurnProcessor
     const results: Anthropic.ToolResultBlockParam[] = [];
 
     for (const [index, request] of requests.entries()) {
-      results.push(await this.runTool(run, turn, index, request));
+      const step = await this.runTool(run, turn, index, request);
+
+      if (step === null) {
+        await this.repository.markAwaitingApproval(run.id);
+        return;
+      }
+
+      results.push(step);
     }
 
     await this.repository.appendEvent({
@@ -117,7 +132,7 @@ export class TurnProcessor
     turn: number,
     index: number,
     request: Anthropic.ToolUseBlock,
-  ): Promise<Anthropic.ToolResultBlockParam> {
+  ): Promise<Anthropic.ToolResultBlockParam | null> {
     const stepKey = toolCallStep(turn, index);
     const recorded = await this.repository.findEventByStepKey(run.id, stepKey);
 
@@ -125,7 +140,16 @@ export class TurnProcessor
       return recorded.payload as Anthropic.ToolResultBlockParam;
     }
 
-    const outcome = await this.tools.execute(request.name, request.input);
+    const decision = await this.approvalFor(run, turn, index, request);
+
+    if (decision === 'awaiting') {
+      return null;
+    }
+
+    const outcome =
+      decision === 'denied'
+        ? { content: 'a reviewer declined this tool call', isError: true }
+        : await this.tools.execute(request.name, request.input);
 
     const result: Anthropic.ToolResultBlockParam = {
       type: 'tool_result',
@@ -142,6 +166,46 @@ export class TurnProcessor
     });
 
     return result;
+  }
+
+  private async approvalFor(
+    run: Run,
+    turn: number,
+    index: number,
+    request: Anthropic.ToolUseBlock,
+  ): Promise<'granted' | 'denied' | 'awaiting'> {
+    if (!this.tools.requiresApproval(request.name)) {
+      return 'granted';
+    }
+
+    const decision = await this.repository.findEventByStepKey(
+      run.id,
+      approvalDecisionStep(turn, index),
+    );
+
+    if (decision !== null) {
+      const { approved } = decision.payload as { approved: boolean };
+      return approved ? 'granted' : 'denied';
+    }
+
+    const requestStep = approvalStep(turn, index);
+    const asked = await this.repository.findEventByStepKey(run.id, requestStep);
+
+    if (asked === null) {
+      await this.repository.appendEvent({
+        runId: run.id,
+        stepKey: requestStep,
+        type: APPROVAL_REQUESTED,
+        payload: {
+          turn,
+          index,
+          toolName: request.name,
+          input: request.input,
+        },
+      });
+    }
+
+    return 'awaiting';
   }
 
   private async callModel(run: Run, stepKey: StepKey): Promise<LlmResponse> {

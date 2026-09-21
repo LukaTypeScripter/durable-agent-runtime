@@ -28,6 +28,7 @@ export const modelEnum = pgEnum('model', [
 export const statusEnum = pgEnum('status', [
   'pending',
   'running',
+  'awaiting_approval',
   'completed',
   'failed',
 ]);

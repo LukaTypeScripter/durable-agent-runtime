@@ -35,8 +35,11 @@ describe('RunsService', () => {
       appendEvent: vi.fn(),
       markCompleted: vi.fn(),
       markFailed: vi.fn(),
+      markAwaitingApproval: vi.fn(),
+      markPending: vi.fn(),
+      findLatestEventByType: vi.fn(),
     };
-    runsQueue = { enqueueTurn: vi.fn() };
+    runsQueue = { enqueueTurn: vi.fn(), resumeTurn: vi.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

@@ -9,6 +9,8 @@ import { LlmService } from '../llm/llm.service.js';
 import type { LlmResponse } from '../llm/llm.service.js';
 import { ToolRegistry } from '../tools/tool-registry.js';
 import {
+  approvalDecisionStep,
+  approvalStep,
   llmCallStep,
   toolCallStep,
   toolResultsStep,
@@ -77,14 +79,18 @@ describe('TurnProcessor', () => {
       appendEvent: vi.fn(),
       markCompleted: vi.fn(),
       markFailed: vi.fn(),
+      markAwaitingApproval: vi.fn(),
+      markPending: vi.fn(),
+      findLatestEventByType: vi.fn(),
     };
     llm = { respond: vi.fn().mockResolvedValue(answered) };
     tools = {
       register: vi.fn(),
       definitions: vi.fn().mockReturnValue([]),
+      requiresApproval: vi.fn().mockReturnValue(false),
       execute: vi.fn().mockResolvedValue({ content: '"the report"', isError: false }),
     };
-    queue = { enqueueTurn: vi.fn() };
+    queue = { enqueueTurn: vi.fn(), resumeTurn: vi.fn() };
 
     processor = new TurnProcessor(
       config,
@@ -218,6 +224,73 @@ describe('TurnProcessor', () => {
       stepKey: turnStep(2),
     });
     expect(repository.markCompleted).not.toHaveBeenCalled();
+  });
+
+  describe('when a tool needs approval', () => {
+    beforeEach(() => {
+      llm.respond.mockResolvedValue(toolRequested);
+      tools.requiresApproval.mockReturnValue(true);
+    });
+
+    it('parks the run without running the tool or holding a job', async () => {
+      await processor.process(job);
+
+      expect(tools.execute).not.toHaveBeenCalled();
+      expect(repository.markAwaitingApproval).toHaveBeenCalledWith(run.id);
+      expect(queue.enqueueTurn).not.toHaveBeenCalled();
+    });
+
+    it('records what is waiting on a reviewer', async () => {
+      await processor.process(job);
+
+      expect(repository.appendEvent).toHaveBeenCalledWith({
+        runId: run.id,
+        stepKey: approvalStep(1, 0),
+        type: 'approval_requested',
+        payload: {
+          turn: 1,
+          index: 0,
+          toolName: 'fetch_report',
+          input: { id: '7' },
+        },
+      });
+    });
+
+    it('runs the tool once a reviewer has approved', async () => {
+      repository.findEventByStepKey.mockImplementation((_id: string, key: string) =>
+        Promise.resolve(
+          key === approvalDecisionStep(1, 0)
+            ? { payload: { approved: true } }
+            : null,
+        ),
+      );
+
+      await processor.process(job);
+
+      expect(tools.execute).toHaveBeenCalledWith('fetch_report', { id: '7' });
+      expect(queue.enqueueTurn).toHaveBeenCalled();
+    });
+
+    it('tells the model when a reviewer declined, without running the tool', async () => {
+      repository.findEventByStepKey.mockImplementation((_id: string, key: string) =>
+        Promise.resolve(
+          key === approvalDecisionStep(1, 0)
+            ? { payload: { approved: false } }
+            : null,
+        ),
+      );
+
+      await processor.process(job);
+
+      expect(tools.execute).not.toHaveBeenCalled();
+      expect(repository.appendEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          stepKey: toolCallStep(1, 0),
+          payload: expect.objectContaining({ is_error: true }),
+        }),
+      );
+      expect(queue.enqueueTurn).toHaveBeenCalled();
+    });
   });
 
   it('stops the run instead of enqueueing past the turn budget', async () => {

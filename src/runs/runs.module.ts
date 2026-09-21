@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
+import { LlmModule } from '../llm/llm.module.js';
+import { ToolsModule } from '../tools/tools.module.js';
 import { RUNS_QUEUE } from '../queue/queue.constants.js';
 import { RunsController } from './runs.controller.js';
 import { RunsQueue } from './runs.queue.js';
@@ -8,7 +10,11 @@ import { RunsService } from './runs.service.js';
 import { TurnProcessor } from './turn.processor.js';
 
 @Module({
-  imports: [BullModule.registerQueue({ name: RUNS_QUEUE })],
+  imports: [
+    BullModule.registerQueue({ name: RUNS_QUEUE }),
+    LlmModule,
+    ToolsModule,
+  ],
   controllers: [RunsController],
   providers: [RunsService, RunsRepository, RunsQueue, TurnProcessor],
   exports: [RunsService],

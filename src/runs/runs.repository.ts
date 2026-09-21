@@ -4,6 +4,7 @@ import { DRIZZLE } from '../db/drizzle.module.js';
 import type { Database } from '../db/drizzle.module.js';
 import { runEvents, runs } from '../db/schema.js';
 import { runCreatedStep } from './step-key.js';
+import { RUN_CREATED } from './conversation.js';
 import type { StepKey } from './step-key.js';
 import { ConfigService } from '@nestjs/config';
 import { AppConfig } from '../config/configuration.js';
@@ -73,6 +74,14 @@ export class RunsRepository {
     return event ?? null;
   }
 
+  async findEventsByRun(runId: string): Promise<RunEvent[]> {
+    return this.db
+      .select()
+      .from(runEvents)
+      .where(eq(runEvents.runId, runId))
+      .orderBy(runEvents.sequence);
+  }
+
   async appendEvent(input: NewRunEvent): Promise<void> {
     await this.db.transaction(async (tx) => {
       const [previous] = await tx
@@ -92,6 +101,13 @@ export class RunsRepository {
     });
   }
 
+  async markFailed(id: string, reason: string): Promise<void> {
+    await this.db
+      .update(runs)
+      .set({ status: 'failed', failReason: reason, updatedAt: sql`now()` })
+      .where(eq(runs.id, id));
+  }
+
   async markCompleted(id: string): Promise<void> {
     await this.db
       .update(runs)
@@ -107,8 +123,8 @@ export class RunsRepository {
         runId: run.id,
         sequence: 0,
         stepKey: runCreatedStep(),
-        type: 'run_created',
-        payload: {},
+        type: RUN_CREATED,
+        payload: { goal: input.goal },
       });
 
       return run;

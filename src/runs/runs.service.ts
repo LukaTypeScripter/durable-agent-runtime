@@ -17,6 +17,7 @@ export class RunsService {
 
     await this.runsQueue.enqueueTurn({
       runId: run.id,
+      turn: FIRST_TURN,
       stepKey: turnStep(FIRST_TURN),
     });
 

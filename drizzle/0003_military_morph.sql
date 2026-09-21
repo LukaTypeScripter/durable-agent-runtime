@@ -1,0 +1,2 @@
+ALTER TABLE "agent_schema"."run_events" ADD CONSTRAINT "run_events_run_step_uq" UNIQUE("run_id","step_key");--> statement-breakpoint
+ALTER TABLE "agent_schema"."run_events" ADD CONSTRAINT "run_events_run_sequence_uq" UNIQUE("run_id","sequence");

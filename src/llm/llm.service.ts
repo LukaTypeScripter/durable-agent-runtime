@@ -14,7 +14,11 @@ export type LlmResponse = Anthropic.Message;
 export class LlmService {
   constructor(@Inject(ANTHROPIC) private readonly client: Anthropic | null) {}
 
-  respond(model: string, goal: string): Promise<LlmResponse> {
+  respond(
+    model: string,
+    messages: Anthropic.MessageParam[],
+    tools: Anthropic.Tool[] = [],
+  ): Promise<LlmResponse> {
     if (this.client === null) {
       throw new ServiceUnavailableException(
         'ANTHROPIC_API_KEY is not configured',
@@ -24,7 +28,8 @@ export class LlmService {
     return this.client.messages.create({
       model,
       max_tokens: MAX_TOKENS,
-      messages: [{ role: 'user', content: goal }],
+      messages,
+      tools,
     });
   }
 }

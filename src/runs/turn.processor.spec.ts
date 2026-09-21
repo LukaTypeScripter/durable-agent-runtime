@@ -1,43 +1,98 @@
-import { NotImplementedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { UnrecoverableError } from 'bullmq';
 import type { Job, Worker } from 'bullmq';
 import { TurnProcessor } from './turn.processor.js';
 import { RunsRepository } from './runs.repository.js';
 import type { Run } from './runs.repository.js';
-import { turnStep } from './step-key.js';
+import { RunsQueue } from './runs.queue.js';
+import { LlmService } from '../llm/llm.service.js';
+import type { LlmResponse } from '../llm/llm.service.js';
+import { ToolRegistry } from '../tools/tool-registry.js';
+import {
+  llmCallStep,
+  toolCallStep,
+  toolResultsStep,
+  turnStep,
+} from './step-key.js';
 import type { TurnJobData } from '../queue/queue.constants.js';
 
 type Mocked<T> = { [K in keyof T]: ReturnType<typeof vi.fn> };
 
 describe('TurnProcessor', () => {
-  const config = { get: () => 8 } as unknown as ConfigService<never, true>;
+  let maxTurns = 25;
+
+  const config = {
+    get: (path: string) => (path === 'budgets.maxTurns' ? maxTurns : 8),
+  } as unknown as ConfigService<never, true>;
 
   const run: Run = {
     id: '00000000-0000-4000-8000-000000000001',
     goal: 'summarise the incident report',
     model: 'claude-haiku-4-5',
-    status: 'pending',
+    status: 'running',
     failReason: null,
+    claimedAt: new Date('2026-01-01T00:00:00Z'),
     createdAt: new Date('2026-01-01T00:00:00Z'),
     updatedAt: new Date('2026-01-01T00:00:00Z'),
-    claimedAt: null,
   };
 
+  const answered = {
+    id: 'msg_01',
+    model: run.model,
+    stop_reason: 'end_turn',
+    content: [{ type: 'text', text: 'the report says ...' }],
+  } as unknown as LlmResponse;
+
+  const toolRequested = {
+    ...answered,
+    stop_reason: 'tool_use',
+    content: [
+      { type: 'tool_use', id: 'toolu_1', name: 'fetch_report', input: { id: '7' } },
+    ],
+  } as unknown as LlmResponse;
+
   const job = {
-    data: { runId: run.id, stepKey: turnStep(1) },
+    data: { runId: run.id, turn: 1, stepKey: turnStep(1) },
   } as Job<TurnJobData>;
 
   let repository: Mocked<RunsRepository>;
+  let llm: Mocked<LlmService>;
+  let tools: Mocked<ToolRegistry>;
+  let queue: Mocked<RunsQueue>;
   let processor: TurnProcessor;
 
   beforeEach(() => {
+    maxTurns = 25;
+
     repository = {
       findById: vi.fn(),
-      claimForTurn: vi.fn(),
+      claimForTurn: vi.fn().mockResolvedValue(run),
       createWithFirstEvent: vi.fn(),
+      findEventByStepKey: vi.fn().mockResolvedValue(null),
+      findEventsByRun: vi
+        .fn()
+        .mockResolvedValue([
+          { sequence: 1, type: 'run_created', payload: { goal: run.goal } },
+        ]),
+      appendEvent: vi.fn(),
+      markCompleted: vi.fn(),
+      markFailed: vi.fn(),
     };
-    processor = new TurnProcessor(config, repository as never);
+    llm = { respond: vi.fn().mockResolvedValue(answered) };
+    tools = {
+      register: vi.fn(),
+      definitions: vi.fn().mockReturnValue([]),
+      execute: vi.fn().mockResolvedValue({ content: '"the report"', isError: false }),
+    };
+    queue = { enqueueTurn: vi.fn() };
+
+    processor = new TurnProcessor(
+      config,
+      repository as never,
+      llm as never,
+      tools as never,
+      queue as never,
+    );
   });
 
   it('applies the configured concurrency to the worker', () => {
@@ -47,15 +102,6 @@ describe('TurnProcessor', () => {
     processor.onApplicationBootstrap();
 
     expect(worker.concurrency).toBe(8);
-  });
-
-  it('claims the run before doing any work', async () => {
-    repository.claimForTurn.mockResolvedValue({ ...run, status: 'running' });
-
-    await expect(processor.process(job)).rejects.toBeInstanceOf(
-      NotImplementedException,
-    );
-    expect(repository.claimForTurn).toHaveBeenCalledWith(run.id);
   });
 
   it('gives up without retrying when the run does not exist', async () => {
@@ -74,14 +120,116 @@ describe('TurnProcessor', () => {
     await expect(processor.process(job)).resolves.toBeUndefined();
   });
 
-  it('ignores a run another worker still holds', async () => {
-    repository.claimForTurn.mockResolvedValue(null);
-    repository.findById.mockResolvedValue({
-      ...run,
-      status: 'running',
-      claimedAt: new Date(),
-    });
+  it('calls the model with the folded conversation and journals the reply', async () => {
+    await processor.process(job);
 
-    await expect(processor.process(job)).resolves.toBeUndefined();
+    expect(llm.respond).toHaveBeenCalledWith(
+      run.model,
+      [{ role: 'user', content: run.goal }],
+      [],
+    );
+    expect(repository.appendEvent).toHaveBeenCalledWith({
+      runId: run.id,
+      stepKey: llmCallStep(1),
+      type: 'llm_response',
+      payload: answered,
+    });
+  });
+
+  it('replays a recorded response instead of calling the model again', async () => {
+    repository.findEventByStepKey.mockResolvedValue({ payload: answered });
+
+    await processor.process(job);
+
+    expect(llm.respond).not.toHaveBeenCalled();
+  });
+
+  it('completes the run when the model finishes its turn', async () => {
+    await processor.process(job);
+
+    expect(repository.markCompleted).toHaveBeenCalledWith(run.id);
+  });
+
+  it('fails the run when the reply was truncated', async () => {
+    llm.respond.mockResolvedValue({ ...answered, stop_reason: 'max_tokens' });
+
+    await processor.process(job);
+
+    expect(repository.markFailed).toHaveBeenCalledWith(run.id, 'max_tokens');
+    expect(repository.markCompleted).not.toHaveBeenCalled();
+  });
+
+  it('fails the run when the model refuses', async () => {
+    llm.respond.mockResolvedValue({ ...answered, stop_reason: 'refusal' });
+
+    await processor.process(job);
+
+    expect(repository.markFailed).toHaveBeenCalledWith(run.id, 'refusal');
+  });
+
+  it('runs each requested tool and journals its result', async () => {
+    llm.respond.mockResolvedValue(toolRequested);
+
+    await processor.process(job);
+
+    expect(tools.execute).toHaveBeenCalledWith('fetch_report', { id: '7' });
+    expect(repository.appendEvent).toHaveBeenCalledWith({
+      runId: run.id,
+      stepKey: toolCallStep(1, 0),
+      type: 'tool_result',
+      payload: {
+        type: 'tool_result',
+        tool_use_id: 'toolu_1',
+        content: '"the report"',
+        is_error: false,
+      },
+    });
+  });
+
+  it('replays a recorded tool result instead of running the tool again', async () => {
+    llm.respond.mockResolvedValue(toolRequested);
+    repository.findEventByStepKey.mockImplementation((_id: string, key: string) =>
+      Promise.resolve(
+        key === toolCallStep(1, 0)
+          ? { payload: { type: 'tool_result', tool_use_id: 'toolu_1' } }
+          : null,
+      ),
+    );
+
+    await processor.process(job);
+
+    expect(tools.execute).not.toHaveBeenCalled();
+  });
+
+  it('collects the results into one message and enqueues the next turn', async () => {
+    llm.respond.mockResolvedValue(toolRequested);
+
+    await processor.process(job);
+
+    expect(repository.appendEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stepKey: toolResultsStep(1),
+        type: 'tool_results',
+      }),
+    );
+    expect(queue.enqueueTurn).toHaveBeenCalledWith({
+      runId: run.id,
+      turn: 2,
+      stepKey: turnStep(2),
+    });
+    expect(repository.markCompleted).not.toHaveBeenCalled();
+  });
+
+  it('stops the run instead of enqueueing past the turn budget', async () => {
+    maxTurns = 1;
+    llm.respond.mockResolvedValue(toolRequested);
+
+    await processor.process(job);
+
+    expect(queue.enqueueTurn).not.toHaveBeenCalled();
+    expect(repository.markFailed).toHaveBeenCalledWith(
+      run.id,
+      'turn_budget_exhausted',
+    );
   });
 });

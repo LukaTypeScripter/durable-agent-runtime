@@ -20,12 +20,22 @@ describe('RunsService', () => {
     model: 'claude-haiku-4-5',
     status: 'pending',
     failReason: null,
+    claimedAt: null,
     createdAt: new Date('2026-01-01T00:00:00Z'),
     updatedAt: new Date('2026-01-01T00:00:00Z'),
   };
 
   beforeEach(async () => {
-    repository = { findById: vi.fn(), createWithFirstEvent: vi.fn() };
+    repository = {
+      findById: vi.fn(),
+      claimForTurn: vi.fn(),
+      createWithFirstEvent: vi.fn(),
+      findEventByStepKey: vi.fn(),
+      findEventsByRun: vi.fn(),
+      appendEvent: vi.fn(),
+      markCompleted: vi.fn(),
+      markFailed: vi.fn(),
+    };
     runsQueue = { enqueueTurn: vi.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -59,6 +69,7 @@ describe('RunsService', () => {
 
     expect(runsQueue.enqueueTurn).toHaveBeenCalledWith({
       runId: run.id,
+      turn: 1,
       stepKey: turnStep(1),
     });
   });

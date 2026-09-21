@@ -11,7 +11,7 @@ import type { LlmResponse } from '../llm/llm.service.js';
 import { ToolRegistry } from '../tools/tool-registry.js';
 import { RunsQueue } from './runs.queue.js';
 import { RunsRepository } from './runs.repository.js';
-import type { Run } from './runs.repository.js';
+import type { Run } from './runs.types.js';
 import {
   APPROVAL_REQUESTED,
   LLM_RESPONSE,

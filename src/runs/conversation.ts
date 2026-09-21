@@ -1,5 +1,5 @@
 import type Anthropic from '@anthropic-ai/sdk';
-import type { RunEvent } from './runs.repository.js';
+import type { RunEvent } from './runs.types.js';
 
 export const RUN_CREATED = 'run_created';
 export const LLM_RESPONSE = 'llm_response';

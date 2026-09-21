@@ -4,7 +4,7 @@ import {
   TOOL_RESULTS,
   foldConversation,
 } from './conversation.js';
-import type { RunEvent } from './runs.repository.js';
+import type { RunEvent } from './runs.types.js';
 
 const event = (
   sequence: number,

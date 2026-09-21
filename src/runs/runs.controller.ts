@@ -12,7 +12,7 @@ import type { CreateRunDto } from './dto/create-run.dto.js';
 import { decideApprovalSchema } from './dto/decide-approval.dto.js';
 import type { DecideApprovalDto } from './dto/decide-approval.dto.js';
 import { RunsService } from './runs.service.js';
-import type { Run } from './runs.repository.js';
+import type { Run } from './runs.types.js';
 
 @Controller('runs')
 export class RunsController {

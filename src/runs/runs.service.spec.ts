@@ -2,7 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { TestingModule } from '@nestjs/testing';
 import { RunsRepository } from './runs.repository.js';
-import type { Run } from './runs.repository.js';
+import type { Run } from './runs.types.js';
 import { RunsService } from './runs.service.js';
 import { RunsQueue } from './runs.queue.js';
 import { turnStep } from './step-key.js';

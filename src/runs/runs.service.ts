@@ -7,7 +7,7 @@ import { APPROVAL_DECIDED, APPROVAL_REQUESTED } from './conversation.js';
 import { approvalDecisionStep } from './step-key.js';
 import type { DecideApprovalDto } from './dto/decide-approval.dto.js';
 import { RunsRepository } from './runs.repository.js';
-import type { Run } from './runs.repository.js';
+import type { Run } from './runs.types.js';
 import type { CreateRunDto } from './dto/create-run.dto.js';
 import { RunsQueue } from './runs.queue.js';
 import { FIRST_TURN, turnStep } from './step-key.js';

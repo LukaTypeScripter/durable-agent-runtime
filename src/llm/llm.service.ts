@@ -4,7 +4,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import Anthropic from '@anthropic-ai/sdk';
-import { ANTHROPIC } from './llm.module.js';
+import { ANTHROPIC } from './llm.tokens.js';
 
 const MAX_TOKENS = 16_000;
 

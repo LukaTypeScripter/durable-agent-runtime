@@ -3,8 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import Anthropic from '@anthropic-ai/sdk';
 import type { AppConfig } from '../config/configuration.js';
 import { LlmService } from './llm.service.js';
+import { ANTHROPIC } from './llm.tokens.js';
 
-export const ANTHROPIC = Symbol('ANTHROPIC');
+export { ANTHROPIC };
 
 @Module({
   providers: [

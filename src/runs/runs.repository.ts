@@ -9,16 +9,12 @@ import type { StepKey } from './step-key.js';
 import { ConfigService } from '@nestjs/config';
 import { AppConfig } from '../config/configuration.js';
 
-export type Run = typeof runs.$inferSelect;
-export type NewRun = typeof runs.$inferInsert;
-export type RunEvent = typeof runEvents.$inferSelect;
-
-export interface NewRunEvent {
-  runId: string;
-  stepKey: StepKey;
-  type: string;
-  payload: unknown;
-}
+import type {
+  NewRun,
+  NewRunEvent,
+  Run,
+  RunEvent,
+} from './runs.types.js';
 
 @Injectable()
 export class RunsRepository {

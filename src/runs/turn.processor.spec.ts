@@ -3,7 +3,7 @@ import { UnrecoverableError } from 'bullmq';
 import type { Job, Worker } from 'bullmq';
 import { TurnProcessor } from './turn.processor.js';
 import { RunsRepository } from './runs.repository.js';
-import type { Run } from './runs.repository.js';
+import type { Run } from './runs.types.js';
 import { RunsQueue } from './runs.queue.js';
 import { LlmService } from '../llm/llm.service.js';
 import type { LlmResponse } from '../llm/llm.service.js';

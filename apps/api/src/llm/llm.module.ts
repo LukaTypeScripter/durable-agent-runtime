@@ -19,8 +19,16 @@ export { ANTHROPIC };
           return null;
         }
 
+        const workspaceId = config.get('llm.anthropic.workspaceId', {
+          infer: true,
+        });
+
         return new Anthropic({
           apiKey,
+          defaultHeaders:
+            workspaceId === undefined
+              ? undefined
+              : { 'anthropic-workspace-id': workspaceId },
           timeout: config.get('llm.requestTimeoutMs', { infer: true }),
           maxRetries: config.get('llm.maxRetries', { infer: true }),
         });

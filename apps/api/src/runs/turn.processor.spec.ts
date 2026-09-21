@@ -34,6 +34,7 @@ describe('TurnProcessor', () => {
     status: 'running',
     failReason: null,
     claimedAt: new Date('2026-01-01T00:00:00Z'),
+    claimedBy: null,
     createdAt: new Date('2026-01-01T00:00:00Z'),
     updatedAt: new Date('2026-01-01T00:00:00Z'),
   };
@@ -53,9 +54,15 @@ describe('TurnProcessor', () => {
     ],
   } as unknown as LlmResponse;
 
-  const job = {
-    data: { runId: run.id, turn: 1, stepKey: turnStep(1) },
-  } as Job<TurnJobData>;
+  const jobAfter = (attemptsMade: number) =>
+    ({
+      id: 'job-1',
+      data: { runId: run.id, turn: 1, stepKey: turnStep(1) },
+      opts: { attempts: 5 },
+      attemptsMade,
+    }) as Job<TurnJobData>;
+
+  const job = jobAfter(0);
 
   let repository: Mocked<RunsRepository>;
   let llm: Mocked<LlmService>;
@@ -291,6 +298,26 @@ describe('TurnProcessor', () => {
         }),
       );
       expect(queue.enqueueTurn).toHaveBeenCalled();
+    });
+  });
+
+  describe('when the job finally fails', () => {
+    it('leaves the run alone while retries remain', async () => {
+      await processor.onFailed(jobAfter(2), new Error('boom'));
+
+      expect(repository.markFailed).not.toHaveBeenCalled();
+    });
+
+    it('records the failure once the attempts are spent', async () => {
+      await processor.onFailed(jobAfter(5), new Error('boom'));
+
+      expect(repository.markFailed).toHaveBeenCalledWith(run.id, 'boom');
+    });
+
+    it('records an unrecoverable failure immediately', async () => {
+      await processor.onFailed(job, new UnrecoverableError('gone'));
+
+      expect(repository.markFailed).toHaveBeenCalledWith(run.id, 'gone');
     });
   });
 

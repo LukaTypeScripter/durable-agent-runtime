@@ -22,6 +22,7 @@ export interface RunResponse {
   status: (typeof RUN_STATUSES)[number];
   failReason: string | null;
   claimedAt: string | null;
+  claimedBy: string | null;
   createdAt: string;
   updatedAt: string;
 }

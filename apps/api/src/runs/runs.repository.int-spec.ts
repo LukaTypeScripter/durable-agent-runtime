@@ -86,25 +86,18 @@ describe('RunsRepository against Postgres', () => {
     it('claims a pending run and stamps the lease', async () => {
       const created = await repository.createWithFirstEvent(newRun());
 
-      const claimed = await repository.claimForTurn(created.id);
+      const claimed = await repository.claimForTurn(created.id, 'job-1');
 
       expect(claimed?.status).toBe('running');
       expect(claimed?.claimedAt).not.toBeNull();
     });
 
-    it('refuses a run another worker holds on a live lease', async () => {
-      const created = await repository.createWithFirstEvent(newRun());
-      await repository.claimForTurn(created.id);
-
-      expect(await repository.claimForTurn(created.id)).toBeNull();
-    });
-
     it('takes over a run whose lease has expired', async () => {
       const created = await repository.createWithFirstEvent(newRun());
-      await repository.claimForTurn(created.id);
+      await repository.claimForTurn(created.id, 'job-1');
       await backdateClaim(created.id, LEASE_MS + 60_000);
 
-      const reclaimed = await repository.claimForTurn(created.id);
+      const reclaimed = await repository.claimForTurn(created.id, 'job-1');
 
       expect(reclaimed?.status).toBe('running');
     });
@@ -114,7 +107,23 @@ describe('RunsRepository against Postgres', () => {
       await repository.markCompleted(created.id);
       await backdateClaim(created.id, LEASE_MS + 60_000);
 
-      expect(await repository.claimForTurn(created.id)).toBeNull();
+      expect(await repository.claimForTurn(created.id, 'job-1')).toBeNull();
+    });
+
+    it('lets the same job reclaim a run it already holds', async () => {
+      const created = await repository.createWithFirstEvent(newRun());
+      await repository.claimForTurn(created.id, 'job-1');
+
+      const retried = await repository.claimForTurn(created.id, 'job-1');
+
+      expect(retried?.status).toBe('running');
+    });
+
+    it('keeps a different job out while the lease is live', async () => {
+      const created = await repository.createWithFirstEvent(newRun());
+      await repository.claimForTurn(created.id, 'job-1');
+
+      expect(await repository.claimForTurn(created.id, 'job-2')).toBeNull();
     });
   });
 
@@ -187,6 +196,7 @@ describe('RunsRepository against Postgres', () => {
     });
   });
 
+
   describe('findMany', () => {
     it('returns newest first', async () => {
       const first = await repository.createWithFirstEvent(newRun());
@@ -200,7 +210,7 @@ describe('RunsRepository against Postgres', () => {
     it('filters by status', async () => {
       const pending = await repository.createWithFirstEvent(newRun());
       const claimed = await repository.createWithFirstEvent(newRun());
-      await repository.claimForTurn(claimed.id);
+      await repository.claimForTurn(claimed.id, 'job-1');
 
       const running = await repository.findMany({ status: 'running', limit: 50 });
 
@@ -220,7 +230,7 @@ describe('RunsRepository against Postgres', () => {
   describe('approval parking', () => {
     it('releases the lease so no worker keeps the run', async () => {
       const created = await repository.createWithFirstEvent(newRun());
-      await repository.claimForTurn(created.id);
+      await repository.claimForTurn(created.id, 'job-1');
 
       await repository.markAwaitingApproval(created.id);
 
@@ -232,21 +242,21 @@ describe('RunsRepository against Postgres', () => {
 
     it('is never picked up again while it waits, however long that is', async () => {
       const created = await repository.createWithFirstEvent(newRun());
-      await repository.claimForTurn(created.id);
+      await repository.claimForTurn(created.id, 'job-1');
       await repository.markAwaitingApproval(created.id);
       await backdateClaim(created.id, LEASE_MS * 100);
 
-      expect(await repository.claimForTurn(created.id)).toBeNull();
+      expect(await repository.claimForTurn(created.id, 'job-1')).toBeNull();
     });
 
     it('becomes claimable again once a reviewer decides', async () => {
       const created = await repository.createWithFirstEvent(newRun());
-      await repository.claimForTurn(created.id);
+      await repository.claimForTurn(created.id, 'job-1');
       await repository.markAwaitingApproval(created.id);
 
       await repository.markPending(created.id);
 
-      expect((await repository.claimForTurn(created.id))?.status).toBe(
+      expect((await repository.claimForTurn(created.id, 'job-1'))?.status).toBe(
         'running',
       );
     });

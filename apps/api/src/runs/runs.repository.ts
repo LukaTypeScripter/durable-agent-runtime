@@ -34,13 +34,13 @@ export class RunsRepository {
     return run ?? null;
   }
 
-  async claimForTurn(id: string): Promise<Run | null> {
+  async claimForTurn(id: string, owner: string): Promise<Run | null> {
     const leaseSeconds =
       this.config.get('redis.turnLeaseMs', { infer: true }) / 1000;
 
     const [run] = await this.db
       .update(runs)
-      .set({ status: 'running', claimedAt: sql`now()`, updatedAt: sql`now()` })
+      .set({ status: 'running', claimedBy: owner, claimedAt: sql`now()`, updatedAt: sql`now()` })
       .where(
         and(
           eq(runs.id, id),
@@ -48,7 +48,10 @@ export class RunsRepository {
             eq(runs.status, 'pending'),
             and(
               eq(runs.status, 'running'),
-              sql`${runs.claimedAt} < NOW() - make_interval(secs => ${leaseSeconds})`,
+              or(
+                eq(runs.claimedBy, owner),
+                sql`${runs.claimedAt} < now() - make_interval(secs => ${leaseSeconds})`,
+              ),
             ),
           ),
         ),

@@ -33,6 +33,7 @@ export const runs = agentSchema.table(
     status: statusEnum().notNull().default('pending'),
     failReason: varchar({ length: 64 }),
     claimedAt: timestamp({ withTimezone: true }),
+    claimedBy: varchar({ length: 128 }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },

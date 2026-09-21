@@ -36,6 +36,13 @@
       "when": 1789976581696,
       "tag": "0004_complex_black_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789981179782,
+      "tag": "0005_bright_black_bolt",
+      "breakpoints": true
     }
   ]
 }

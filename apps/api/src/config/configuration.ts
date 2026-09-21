@@ -28,6 +28,7 @@ export function buildConfig(env: Env) {
       maxRetries: env.LLM_MAX_RETRIES,
       anthropic: {
         apiKey: env.ANTHROPIC_API_KEY,
+        workspaceId: env.ANTHROPIC_WORKSPACE_ID,
         defaultModel: env.ANTHROPIC_DEFAULT_MODEL,
       },
     },

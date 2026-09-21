@@ -69,7 +69,9 @@
           },
           "defaultConfiguration": "development",
           "options": {
-            "proxyConfig": "proxy.conf.json"
+            "proxyConfig": "proxy.conf.json",
+            "host": "127.0.0.1",
+            "port": 4300
           }
         },
         "test": {

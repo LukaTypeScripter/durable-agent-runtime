@@ -34,6 +34,7 @@ export const envSchema = z.object({
   TURN_BACKOFF_MS: durationMs.default(2_000),
 
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
+  ANTHROPIC_WORKSPACE_ID: z.string().min(1).optional(),
   ANTHROPIC_DEFAULT_MODEL: z
     .enum(modelEnum.enumValues)
     .default('claude-sonnet-5'),

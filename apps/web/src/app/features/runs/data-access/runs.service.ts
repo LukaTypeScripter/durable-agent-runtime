@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Service, inject } from '@angular/core';
-import type { Observable } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import type {
   CreateRunDto,
   DecideApprovalDto,
@@ -11,18 +11,16 @@ import type {
 export class RunsService {
   private readonly http = inject(HttpClient);
 
-  create(run: CreateRunDto): Observable<RunResponse> {
-    return this.http.post<RunResponse>('/runs', run);
-  }
-
-  findById(id: string): Observable<RunResponse> {
-    return this.http.get<RunResponse>(`/runs/${id}`);
+  create(run: CreateRunDto): Promise<RunResponse> {
+    return firstValueFrom(this.http.post<RunResponse>('/runs', run));
   }
 
   decideApproval(
     id: string,
     decision: DecideApprovalDto,
-  ): Observable<RunResponse> {
-    return this.http.post<RunResponse>(`/runs/${id}/approval`, decision);
+  ): Promise<RunResponse> {
+    return firstValueFrom(
+      this.http.post<RunResponse>(`/runs/${id}/approval`, decision),
+    );
   }
 }

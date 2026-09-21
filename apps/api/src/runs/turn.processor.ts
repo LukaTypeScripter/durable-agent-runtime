@@ -1,5 +1,5 @@
 import type { OnApplicationBootstrap } from '@nestjs/common';
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import { Job, UnrecoverableError } from 'bullmq';
 import type Anthropic from '@anthropic-ai/sdk';
@@ -52,7 +52,7 @@ export class TurnProcessor
 
   async process(job: Job<TurnJobData>): Promise<void> {
     const { runId, turn } = job.data;
-    const run = await this.repository.claimForTurn(runId);
+    const run = await this.repository.claimForTurn(runId, job.id ?? runId);
 
     if (run === null) {
       const existing = await this.repository.findById(runId);
@@ -82,6 +82,19 @@ export class TurnProcessor
     }
 
     await this.repository.markCompleted(run.id);
+  }
+
+  @OnWorkerEvent('failed')
+  async onFailed(job: Job<TurnJobData>, error: Error): Promise<void> {
+    const allowed = job.opts.attempts ?? 1;
+    const permanent =
+      error instanceof UnrecoverableError || job.attemptsMade >= allowed;
+
+    if (!permanent) {
+      return;
+    }
+
+    await this.repository.markFailed(job.data.runId, error.message.slice(0, 64));
   }
 
   private async continueWithTools(

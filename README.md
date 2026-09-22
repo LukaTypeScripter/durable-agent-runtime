@@ -66,8 +66,3 @@ with all the problems listed at once, rather than failing later at first use.
 path's non-negotiables. Editors that read `AGENTS.md` pick it up automatically.
 Task-specific guides live in `.agents/skills/`.
 
-## Status
-
-Early. The configuration layer, database module, and local infrastructure are in
-place. The journal schema, turn loop, queue workers, and HTTP API are not built
-yet.
